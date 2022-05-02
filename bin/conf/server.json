@@ -1,0 +1,22 @@
+{
+  "Module": {
+    "helloworld": [
+      {
+        "Id": "helloworld001",
+        "ProcessID": "development"
+      }
+    ],
+    "Web": [
+      {
+        "Id": "Web001",
+        "ProcessID": "development"
+      }
+    ],
+    "rpctest": [
+      {
+        "Id": "rpctest001",
+        "ProcessID": "development"
+      }
+    ]
+  }
+}
