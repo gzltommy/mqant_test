@@ -42,6 +42,20 @@ func (self *rpctest) OnInit(app module.App, settings *conf.ModuleSettings) {
 	//元数据是节点级别的,且可以随时修改,利用好它可以灵活的实现定制化的服务发现 比如实现灰度发布,熔断策略等等
 	self.GetServer().Options().Metadata["state"] = "alive"
 
+	// 在模块中获取应用级别的自定义配置
+	MongodbUrl := app.GetSettings().Settings["MongodbURL"].(string)
+	MongodbDB := app.GetSettings().Settings["MongodbDB"].(string)
+	_ = MongodbUrl
+	_ = MongodbDB
+
+	// 在模块中获取模块的自定义配置
+	StaticPath := self.GetModuleSettings().Settings["StaticPath"].(string)
+	Port := int(self.GetModuleSettings().Settings["Port"].(float64))
+	_ = StaticPath
+	_ = Port
+
+	// 为该模块注册 handler
+	// Register（单线程）/RegisterGO（多线程）
 	self.GetServer().RegisterGO("/test/proto", self.testProto)
 	self.GetServer().RegisterGO("/test/marshal", self.testMarshal)
 }

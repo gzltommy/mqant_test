@@ -1,4 +1,18 @@
 {
+  "Log": {
+    "dingtalk": {
+      "webhookurl": "https://oapi.dingtalk.com/robot/send?access_token=xxx",
+      "level": 3
+    },
+    "file": {
+      "daily": true,
+      "level": 7
+    }
+  },
+  "Settings": {
+    "MongodbURL": "mongodb://xx:xx@xx:8015",
+    "MongodbDB": "xx-server"
+  },
   "Module": {
     "helloworld": [
       {
@@ -15,7 +29,11 @@
     "rpctest": [
       {
         "Id": "rpctest001",
-        "ProcessID": "development"
+        "ProcessID": "development",
+        "Settings": {
+          "StaticPath": "static",
+          "Port": 6010
+        }
       }
     ]
   }

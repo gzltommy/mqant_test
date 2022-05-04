@@ -38,6 +38,14 @@ func main() {
 		module.Registry(rs), //指定服务发现
 	)
 
+	// 在应用中获取应用级别的自定义配置
+	_ = app.OnConfigurationLoaded(func(app module.App) {
+		MongodbUrl := app.GetSettings().Settings["MongodbURL"].(string)
+		MongodbDB := app.GetSettings().Settings["MongodbDB"].(string)
+		_ = MongodbUrl
+		_ = MongodbDB
+	})
+
 	// 应用级别的节点选择策略
 	_ = app.Options().Selector.Init(selector.SetStrategy(func(services []*registry.Service) selector.Next {
 		var nodes []WeightNode
