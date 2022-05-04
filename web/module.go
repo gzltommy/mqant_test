@@ -2,16 +2,21 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/liangdas/mqant/conf"
 	"github.com/liangdas/mqant/log"
 	"github.com/liangdas/mqant/module"
 	"github.com/liangdas/mqant/module/base"
+	"github.com/liangdas/mqant/registry"
 	"github.com/liangdas/mqant/rpc"
 	rpcpb "github.com/liangdas/mqant/rpc/pb"
+	"github.com/liangdas/mqant/selector"
 	"io"
+	"math/rand"
 	"mqant_test/rpctest"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -48,6 +53,39 @@ func (self *Web) startHttpServer() *http.Server {
 				"helloworld",
 				"/say/hi",
 				mqrpc.Param(r.Form.Get("name")),
+
+				// 设置 RPC 级别的节点选择策略参数
+				selector.WithStrategy(func(services []*registry.Service) selector.Next {
+					var nodes []*registry.Node
+					// Filter the nodes for datacenter
+					for _, service := range services {
+						if service.Version != "1.0.0" { //利用服务版本过滤节点
+							continue
+						}
+						//for _, node := range service.Nodes {
+						//	nodes = append(nodes, node)
+						//}
+
+						for _, node := range service.Nodes {
+							nodes = append(nodes, node)
+							if node.Metadata["state"] == "alive" || node.Metadata["state"] == "" {
+								nodes = append(nodes, node)
+							}
+						}
+					}
+
+					var mtx sync.Mutex
+					//log.Info("services[0] $v",services[0].Nodes[0])
+					return func() (*registry.Node, error) {
+						mtx.Lock()
+						defer mtx.Unlock()
+						if len(nodes) == 0 {
+							return nil, fmt.Errorf("no node")
+						}
+						index := rand.Intn(int(len(nodes)))
+						return nodes[index], nil
+					}
+				}),
 			),
 		)
 		log.Info("RpcCall %v , err %v", rstr, err)
@@ -82,8 +120,8 @@ func (self *Web) startHttpServer() *http.Server {
 		err := mqrpc.Marshal(rspbean, func() (reply interface{}, errstr interface{}) {
 			return self.RpcCall(
 				ctx,
-				"rpctest",       //要访问的moduleType
-				"/test/marshal", //访问模块中handler路径
+				"rpctest@mynode001", //要访问的 moduleType，@ 后指定了节点
+				"/test/marshal",     //访问模块中handler路径
 				mqrpc.Param(&rpctest.Req{Id: r.Form.Get("mid")}),
 			)
 		})

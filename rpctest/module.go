@@ -8,6 +8,8 @@ import (
 	"github.com/liangdas/mqant/module"
 	basemodule "github.com/liangdas/mqant/module/base"
 	rpcpb "github.com/liangdas/mqant/rpc/pb"
+	"github.com/liangdas/mqant/server"
+	"time"
 )
 
 var Module = func() module.Module {
@@ -23,12 +25,23 @@ func (self *rpctest) GetType() string {
 	//很关键,需要与配置文件中的Module配置对应
 	return "rpctest"
 }
+
+//模块（服务）启动是,会自动注册模块 Version() 的返回值作为服务的版本
 func (self *rpctest) Version() string {
 	//可以在监控时了解代码版本
 	return "1.0.0"
 }
 func (self *rpctest) OnInit(app module.App, settings *conf.ModuleSettings) {
-	self.BaseModule.OnInit(self, app, settings)
+	self.BaseModule.OnInit(self, app, settings,
+		server.RegisterInterval(15*time.Second), // 15 秒注册一次
+		server.RegisterTTL(30*time.Second),      // 注册有效时间为 30 秒
+		server.Id("mynode001"),                  // 手动指定一个节点id
+	)
+
+	// 设置一些元数据
+	//元数据是节点级别的,且可以随时修改,利用好它可以灵活的实现定制化的服务发现 比如实现灰度发布,熔断策略等等
+	self.GetServer().Options().Metadata["state"] = "alive"
+
 	self.GetServer().RegisterGO("/test/proto", self.testProto)
 	self.GetServer().RegisterGO("/test/marshal", self.testMarshal)
 }
