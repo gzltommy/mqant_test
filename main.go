@@ -8,6 +8,8 @@ import (
 	"github.com/liangdas/mqant/module"
 	"github.com/liangdas/mqant/registry"
 	"github.com/liangdas/mqant/registry/consul"
+	mqrpc "github.com/liangdas/mqant/rpc"
+	rpcpb "github.com/liangdas/mqant/rpc/pb"
 	"github.com/liangdas/mqant/selector"
 	"github.com/nats-io/nats.go"
 	"math/rand"
@@ -63,6 +65,17 @@ func main() {
 		module.WorkDir(wdPath),
 		module.Configure(confPath),
 		module.ProcessID(processID),
+
+		//我们通常希望能监控handler的具体执行情况,例如做监控报警等等
+		//应用级别handler监控
+
+		//调用方监控
+		module.SetClientRPChandler(func(app module.App, server registry.Node, rpcinfo rpcpb.RPCInfo, result interface{}, err string, exec_time int64) {
+		}),
+
+		//服务方监控
+		module.SetServerRPCHandler(func(app module.App, server module.Module, callInfo mqrpc.CallInfo) {
+		}),
 	)
 
 	// 在应用中获取应用级别的自定义配置

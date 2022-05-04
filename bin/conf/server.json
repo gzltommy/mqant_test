@@ -1,9 +1,5 @@
 {
   "Log": {
-    "dingtalk": {
-      "webhookurl": "https://oapi.dingtalk.com/robot/send?access_token=xxx",
-      "level": 3
-    },
     "file": {
       "daily": true,
       "level": 7
@@ -23,6 +19,12 @@
     "Web": [
       {
         "Id": "Web001",
+        "ProcessID": "development"
+      }
+    ],
+    "HttpGateWay": [
+      {
+        "Id": "HttpGateWay001",
         "ProcessID": "development"
       }
     ],
