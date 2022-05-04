@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/liangdas/mqant"
 	"github.com/liangdas/mqant/log"
@@ -23,6 +24,19 @@ type WeightNode struct {
 }
 
 func main() {
+	flag.Parse() //解析输入的参数
+	/*
+		mqant 会在工作路径下初始化未指定的设置：
+		配置文件 {workdir}/bin/conf/server.json
+		日志文件目录 {workdir}/bin/logs
+		BI 日志文件目录 {workdir}/bin/bi
+	*/
+	wdPath := *flag.String("wd", "", "Server work directory")              // 进程的工作路径
+	confPath := *flag.String("conf", "", "Server configuration file path") //指定配置文件
+	processID := *flag.String("pid", "development", "Server ProcessID?")   //指定模块分组ID
+	//Logdir = *flag.String("log", "", "Log file directory?")
+	//BIdir = *flag.String("bi", "", "bi file directory?")
+
 	rs := consul.NewRegistry(func(options *registry.Options) {
 		options.Addrs = []string{"192.168.24.147:8500"}
 	})
@@ -32,10 +46,23 @@ func main() {
 		log.Error("nats error %v", err)
 		return
 	}
+	/*
+	   服务发现配置只能通过创建 app 代码设置,包涵:
+	   		* nats 配置
+	   		* 注册中心配置(consul,etcd)
+	   		* 服务发现 TTL 和注册间隔
+	*/
+
 	app := mqant.CreateApp(
 		module.Debug(true),  //只有是在调试模式下才会在控制台打印日志, 非调试模式下只在日志文件中输出日志
 		module.Nats(nc),     //指定nats rpc
 		module.Registry(rs), //指定服务发现
+		module.RegisterTTL(20*time.Second),
+		module.RegisterInterval(10*time.Second),
+
+		module.WorkDir(wdPath),
+		module.Configure(confPath),
+		module.ProcessID(processID),
 	)
 
 	// 在应用中获取应用级别的自定义配置
