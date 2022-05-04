@@ -30,6 +30,7 @@ func (self *rpctest) Version() string {
 func (self *rpctest) OnInit(app module.App, settings *conf.ModuleSettings) {
 	self.BaseModule.OnInit(self, app, settings)
 	self.GetServer().RegisterGO("/test/proto", self.testProto)
+	self.GetServer().RegisterGO("/test/marshal", self.testMarshal)
 }
 
 func (self *rpctest) Run(closeSig chan bool) {
@@ -43,5 +44,10 @@ func (self *rpctest) OnDestroy() {
 }
 func (self *rpctest) testProto(req *rpcpb.ResultInfo) (*rpcpb.ResultInfo, error) {
 	r := &rpcpb.ResultInfo{Error: *proto.String(fmt.Sprintf("你说: %v", req.Error))}
+	return r, nil
+}
+
+func (self *rpctest) testMarshal(req Req) (*Rsp, error) {
+	r := &Rsp{Msg: fmt.Sprintf("你的ID：%v", req.Id)}
 	return r, nil
 }

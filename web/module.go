@@ -10,6 +10,7 @@ import (
 	"github.com/liangdas/mqant/rpc"
 	rpcpb "github.com/liangdas/mqant/rpc/pb"
 	"io"
+	"mqant_test/rpctest"
 	"net/http"
 	"time"
 )
@@ -37,6 +38,8 @@ func (self *Web) OnInit(app module.App, settings *conf.ModuleSettings) {
 
 func (self *Web) startHttpServer() *http.Server {
 	srv := &http.Server{Addr: ":8080"}
+
+	// 基本类型数据
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		rstr, err := mqrpc.String(
@@ -51,6 +54,7 @@ func (self *Web) startHttpServer() *http.Server {
 		_, _ = io.WriteString(w, rstr)
 	})
 
+	// protocolbuffer 数据
 	http.HandleFunc("/test/proto", func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		ctx, _ := context.WithTimeout(context.TODO(), time.Second*3)
@@ -68,6 +72,26 @@ func (self *Web) startHttpServer() *http.Server {
 			_, _ = io.WriteString(w, err.Error())
 		}
 		_, _ = io.WriteString(w, protobean.Error)
+	})
+
+	//  自定义数据
+	http.HandleFunc("/test/marshal", func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		ctx, _ := context.WithTimeout(context.TODO(), time.Second*3)
+		rspbean := new(rpctest.Rsp)
+		err := mqrpc.Marshal(rspbean, func() (reply interface{}, errstr interface{}) {
+			return self.RpcCall(
+				ctx,
+				"rpctest",       //要访问的moduleType
+				"/test/marshal", //访问模块中handler路径
+				mqrpc.Param(&rpctest.Req{Id: r.Form.Get("mid")}),
+			)
+		})
+		log.Info("RpcCall %v , err %v", rspbean, err)
+		if err != nil {
+			_, _ = io.WriteString(w, err.Error())
+		}
+		_, _ = io.WriteString(w, rspbean.Msg)
 	})
 
 	go func() {

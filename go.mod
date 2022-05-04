@@ -2,12 +2,15 @@ module mqant_test
 
 go 1.17
 
-require github.com/liangdas/mqant v1.2.0
+require (
+	github.com/golang/protobuf v1.3.2
+	github.com/liangdas/mqant v1.2.0
+	github.com/nats-io/nats.go v1.9.1
+)
 
 require (
 	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da // indirect
 	github.com/gogo/protobuf v1.3.0 // indirect
-	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/gomodule/redigo v2.0.0+incompatible // indirect
 	github.com/google/uuid v1.0.0 // indirect
 	github.com/hashicorp/consul/api v1.1.0 // indirect
@@ -20,7 +23,6 @@ require (
 	github.com/mitchellh/hashstructure v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
 	github.com/nats-io/jwt v0.3.0 // indirect
-	github.com/nats-io/nats.go v1.9.1 // indirect
 	github.com/nats-io/nkeys v0.1.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
