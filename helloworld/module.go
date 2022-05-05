@@ -3,6 +3,7 @@ package helloworld
 import (
 	"fmt"
 	"github.com/liangdas/mqant/conf"
+	"github.com/liangdas/mqant/gate"
 	"github.com/liangdas/mqant/log"
 	"github.com/liangdas/mqant/module"
 	"github.com/liangdas/mqant/module/base"
@@ -41,6 +42,7 @@ func (self *HellWorld) OnInit(app module.App, settings *conf.ModuleSettings) {
 	self.GetServer().Options().Metadata["state"] = "alive"
 
 	self.GetServer().RegisterGO("/say/hi", self.say) // 将 handler 注册到模块中
+	self.GetServer().RegisterGO("HD_say", self.gatesay)
 	log.Info("%v模块初始化完成...", self.GetType())
 }
 
@@ -60,4 +62,10 @@ func (self *HellWorld) OnDestroy() {
 // 新增 handler 函数
 func (self *HellWorld) say(name string) (r string, err error) {
 	return fmt.Sprintf("hi %v", name), nil
+}
+
+func (self *HellWorld) gatesay(session gate.Session, msg map[string]interface{}) (r string, err error) {
+	//主动给客户端发送消息
+	session.Send("/gate/send/test", []byte(fmt.Sprintf("send hi to %v", msg["name"])))
+	return fmt.Sprintf("hi %v 你在网关 %v", msg["name"], session.GetServerId()), nil
 }

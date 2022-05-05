@@ -2,40 +2,90 @@ package httpgateway
 
 import (
 	"github.com/liangdas/mqant/conf"
+	"github.com/liangdas/mqant/httpgateway"
+	go_api "github.com/liangdas/mqant/httpgateway/proto"
 	"github.com/liangdas/mqant/log"
 	"github.com/liangdas/mqant/module"
 	basemodule "github.com/liangdas/mqant/module/base"
 	mqrpc "github.com/liangdas/mqant/rpc"
 	rpcpb "github.com/liangdas/mqant/rpc/pb"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
+	"strings"
+	//" github.com/labstack/echo/v4"
 )
 
 var Module = func() module.Module {
-	this := new(HttpGateWay)
+	this := new(httpgate)
 	return this
 }
 
-type HttpGateWay struct {
+type httpgate struct {
 	basemodule.BaseModule
 }
 
-func (self *HttpGateWay) GetType() string {
+func (self *httpgate) GetType() string {
 	//很关键,需要与配置文件中的Module配置对应
-	return "HttpGateWay"
+	return "httpgate"
 }
-func (self *HttpGateWay) Version() string {
+func (self *httpgate) Version() string {
 	//可以在监控时了解代码版本
 	return "1.0.0"
 }
-func (self *HttpGateWay) OnInit(app module.App, settings *conf.ModuleSettings) {
+func (self *httpgate) OnInit(app module.App, settings *conf.ModuleSettings) {
 	self.BaseModule.OnInit(self, app, settings)
+	self.SetListener(self)
 
-	self.SetListener(self) // 设置监听器
+	//注册 handler(方案一)
+	//self.GetServer().RegisterGO("/httpgate/topic", self.httpgateway)
+
+	// 注册handler(方案二)
+	/*
+		利用 mqrpc.RPCListener 监听未实现的 handler，然后将请求通过 httptest 路由 web 框架中
+		当 RPC 未找到已注册的 handler 时会调用 func NoFoundFunction(fn string)(*mqrpc.FunctionInfo,error)
+	*/
+	self.SetListener(self)
 }
 
-func (self *HttpGateWay) startHttpServer() *http.Server {
-	srv := &http.Server{Addr: ":8081"}
+func (self *httpgate) NoFoundFunction(fn string) (*mqrpc.FunctionInfo, error) {
+	return &mqrpc.FunctionInfo{
+		Function:  reflect.ValueOf(self.httpgateway),
+		Goroutine: true,
+	}, nil
+}
+func (self *httpgate) BeforeHandle(fn string, callInfo *mqrpc.CallInfo) error {
+	return nil
+}
+func (self *httpgate) OnTimeOut(fn string, Expired int64) {
+
+}
+func (self *httpgate) OnError(fn string, callInfo *mqrpc.CallInfo, err error) {}
+func (self *httpgate) OnComplete(fn string, callInfo *mqrpc.CallInfo, result *rpcpb.ResultInfo, exec_time int64) {
+}
+
+/*
+	网关默认路由规则是从 URL.Path 的第一个段取出 moduleType
+		/[moduleType]/path
+
+	举例：
+		http://127.0.0.1:8090/httpgate/topic
+			moduleType httpgate
+			hander /httpgate/topic
+*/
+func (self *httpgate) startHttpServer() *http.Server {
+	srv := &http.Server{
+		Addr: ":8090",
+		// 方式一：使用默认路由规则
+		//Handler: httpgateway.NewHandler(self.App), // 创建网关，使用默认路由规则
+
+		// 方式二：编写自定义路由规则器
+		Handler: httpgateway.NewHandler(self.App,
+			httpgateway.SetRoute(func(app module.App, r *http.Request) (service *httpgateway.Service, e error) {
+				return nil, nil
+			})),
+	}
+	//http.Handle("/", httpgateway.NewHandler(self.App))
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
@@ -47,75 +97,55 @@ func (self *HttpGateWay) startHttpServer() *http.Server {
 	return srv
 }
 
-func (self *HttpGateWay) Run(closeSig chan bool) {
-	log.Info("HttpGateWay: starting HTTP server :8080")
+func (self *httpgate) Run(closeSig chan bool) {
+	log.Info("httpgate: starting HTTP server :8090")
 	srv := self.startHttpServer()
 	<-closeSig
-	log.Info("HttpGateWay: stopping HTTP server")
+	log.Info("httpgate: stopping HTTP server")
 	// now close the server gracefully ("shutdown")
 	// timeout could be given instead of nil as a https://golang.org/pkg/context/
 	if err := srv.Shutdown(nil); err != nil {
 		panic(err) // failure/timeout shutting down the server gracefully
 	}
-	log.Info("HttpGateWay: done. exiting")
+	log.Info("httpgate: done. exiting")
 }
 
-func (self *HttpGateWay) OnDestroy() {
+func (self *httpgate) OnDestroy() {
 	//一定别忘了继承
 	self.BaseModule.OnDestroy()
 }
 
-func (self *HttpGateWay) NoFoundFunction(fn string) (*mqrpc.FunctionInfo, error) {
-	return &mqrpc.FunctionInfo{
-		Function:  reflect.ValueOf(self.CloudFunction),
-		Goroutine: true,
-	}, nil
-}
+//网关转发 RPC 的 handler 定义为
+//httpgateway 函数中，网络框架可以用 gin,echo,beego 等其他 web 框架替代
+func (self *httpgate) httpgateway(request *go_api.Request) (*go_api.Response, error) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/httpgate/topic", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte(`hello world`))
+	})
 
-func (self *HttpGateWay) BeforeHandle(fn string, callInfo *mqrpc.CallInfo) error {
-	return nil
-}
-func (self *HttpGateWay) OnTimeOut(fn string, Expired int64) {
-
-}
-func (self *HttpGateWay) OnError(fn string, callInfo *mqrpc.CallInfo, err error) {}
-
-/**
-fn         方法名
-params        参数
-result        执行结果
-exec_time     方法执行时间 单位为 Nano 纳秒  1000000纳秒等于1毫秒
-*/
-func (self *HttpGateWay) OnComplete(fn string, callInfo *mqrpc.CallInfo, result *rpcpb.ResultInfo, exec_time int64) {
-}
-
-func (self *HttpGateWay) CloudFunction(trace log.TraceSpan, request *http.Request) (*http.Response, error) {
-	//e := echo.New()
-	//ectest := httgatewaycontrollers.SetupRouter(self, e)
-	//req, err := http.NewRequest(request.Method, request.Url, strings.NewReader(request.Body))
-	//if err != nil {
-	//	return nil, err
-	//}
-	//for _, v := range request.Header {
-	//	req.Header.Set(v.Key, strings.Join(v.Values, ","))
-	//}
-	//rr := httptest.NewRecorder()
-	//ectest.ServeHTTP(rr, req)
-	//resp := &go_api.Response{
-	//	StatusCode: int32(rr.Code),
-	//	Body:       rr.Body.String(),
-	//	Header:     make(map[string]*go_api.Pair),
-	//}
-	//for key, vals := range rr.Header() {
-	//	header, ok := resp.Header[key]
-	//	if !ok {
-	//		header = &go_api.Pair{
-	//			Key: key,
-	//		}
-	//		resp.Header[key] = header
-	//	}
-	//	header.Values = vals
-	//}
-	//return resp, nil
-	return nil, nil
+	req, err := http.NewRequest(request.Method, request.Url, strings.NewReader(request.Body))
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range request.Header {
+		req.Header.Set(v.Key, strings.Join(v.Values, ","))
+	}
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+	resp := &go_api.Response{
+		StatusCode: int32(rr.Code),
+		Body:       rr.Body.String(),
+		Header:     make(map[string]*go_api.Pair),
+	}
+	for key, vals := range rr.Header() {
+		header, ok := resp.Header[key]
+		if !ok {
+			header = &go_api.Pair{
+				Key: key,
+			}
+			resp.Header[key] = header
+		}
+		header.Values = vals
+	}
+	return resp, nil
 }

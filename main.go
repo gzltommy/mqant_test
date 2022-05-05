@@ -70,11 +70,13 @@ func main() {
 		//应用级别handler监控
 
 		//调用方监控
-		module.SetClientRPChandler(func(app module.App, server registry.Node, rpcinfo rpcpb.RPCInfo, result interface{}, err string, exec_time int64) {
+		module.SetClientRPChandler(func(app module.App, server registry.Node, rpcinfo *rpcpb.RPCInfo, result interface{}, err string, exec_time int64) {
+
 		}),
 
 		//服务方监控
-		module.SetServerRPCHandler(func(app module.App, server module.Module, callInfo mqrpc.CallInfo) {
+		module.SetServerRPCHandler(func(app module.App, module module.Module, callInfo *mqrpc.CallInfo) {
+
 		}),
 	)
 
