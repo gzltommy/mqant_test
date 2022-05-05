@@ -48,7 +48,7 @@ func (self *Web) startHttpServer() *http.Server {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		rstr, err := mqrpc.String(
-			self.RpcCall(
+			self.Call(
 				context.Background(),
 				"helloworld",
 				"/say/hi",
@@ -98,7 +98,7 @@ func (self *Web) startHttpServer() *http.Server {
 		ctx, _ := context.WithTimeout(context.TODO(), time.Second*3)
 		protobean := new(rpcpb.ResultInfo)
 		err := mqrpc.Proto(protobean, func() (reply interface{}, errstr interface{}) {
-			return self.RpcCall(
+			return self.Call(
 				ctx,
 				"rpctest",     //要访问的moduleType
 				"/test/proto", //访问模块中handler路径
@@ -118,7 +118,7 @@ func (self *Web) startHttpServer() *http.Server {
 		ctx, _ := context.WithTimeout(context.TODO(), time.Second*3)
 		rspbean := new(rpctest.Rsp)
 		err := mqrpc.Marshal(rspbean, func() (reply interface{}, errstr interface{}) {
-			return self.RpcCall(
+			return self.Call(
 				ctx,
 				"rpctest@mynode001", //要访问的 moduleType，@ 后指定了节点
 				"/test/marshal",     //访问模块中handler路径
